@@ -4,6 +4,7 @@
 
 Refer to the Salesforce documentation for Salesforce DX.
 This is a Salesforce DX project.
+Chapters are located in individual branches in the git repository. Steps within a chapter are represented by individual commits
 
 ## Resources
 
