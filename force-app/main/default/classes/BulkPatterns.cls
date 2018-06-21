@@ -28,41 +28,36 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 public with sharing class BulkPatterns {
 
-/*
-    This solution uses future calls to move the intensive operation into
-	a separate execution context
-*/
-	@future
-	public static void futureUpdateOpportunities(Set<ID> opportunitiyIds)
-	{
-		Map<ID, Opportunity> newMap = 
-			new Map<ID, Opportunity>(
-				[SELECT ID, OwnerID from Opportunity where ID in :opportunitiyIds]);
-		afterUpdateOpportunityFutureSupport(newMap.values(), newMap, null);
-	}
-	private static Boolean futureCalled = false;
+	/*
+		This solution uses batch Apex to move the intensive operation into
+		a separate execution context
+	*/
+	private static Boolean batchCalled = false;
 
-	public static void afterUpdateOpportunityFutureSupport(
+	public static void afterUpdateOpportunityBatchSupport(
 		List<Opportunity> newList, Map<ID, Opportunity> newMap, 
 		Map<ID, Opportunity> oldMap)
 	{
-		// Pattern 6 - with future support
+		// Pattern 7 - with batch support
 		
 		Set<ID> opportunityIDsWithStagenameChanges = new Set<ID>();
 		
 		// Get OpportunityContactRoles
-		if(!System.isFuture())
+		if(!System.isBatch())
 		{
 			for(Opportunity op: newList)
 			{
-				if(op.StageName != oldMap.get(op.id).StageName) 
+				if(op.StageName != oldmap.get(op.id).StageName) 
 					opportunityIDsWithStagenameChanges.add(op.id);
 			}
 			if(newList.size()>50)
 			{
-				if(!futureCalled) 
-					futureUpdateOpportunities(opportunityIDsWithStagenameChanges);
-				futureCalled = true;
+				if(!batchCalled) 
+				{
+					Database.executeBatch(new BulkPatternBatch(
+						opportunityIDsWithStagenameChanges), 100);
+				}
+				batchCalled = true;
 				return;
 			}
 		}
@@ -73,15 +68,14 @@ public with sharing class BulkPatterns {
 			
 			
 		// Query for all related OpportunityContactRole
-		List<OpportunityContactRole> ocrs = [
-			Select ID, ContactID, IsPrimary, OpportunityID 
-			from OpportunityContactRole where OpportunityID in 
-			:opportunityIDsWithStagenameChanges];
+		List<OpportunityContactRole> ocrs = 
+			[Select ID, ContactID, IsPrimary, OpportunityID 
+			from OpportunityContactRole 
+			where OpportunityID in :opportunityIDsWithStagenameChanges];
 
 		// Look for primary, or for no OCR on opportunities
 		Set<ID> opsWithNoPrimaryWithContactRoles = opportunityIDsWithStagenameChanges.Clone();
 		Set<ID> opsWithNoContactRoles = opportunityIDsWithStagenameChanges.Clone();
-
 		
 		for(OpportunityContactRole ocr: ocrs)
 		{
@@ -96,26 +90,28 @@ public with sharing class BulkPatterns {
 			// Find out which ones have existing tasks
 			List<Task> tasks = [
 				SELECT ID, OwnerID, WhatID, Status, Subject, Type 
-				from Task where Type='Other' And WhatID in :opsWithNoContactRoles 
-				And IsClosed = False And Subject = 'Assign Primary Contact'   ];
+				from Task where Type='Other' 
+				And WhatID in :OpsWithNoContactRoles 
+				And IsClosed = False 
+				And Subject = 'Assign Primary Contact'   ];
 
-			// Don't loop through opportunities - waste of time. 
+			// Don't loop through opportunities - waste of time.
 			// Loop through tasks to build set of IDs with tasks
 			Set<ID> opsWithoutTasks = opsWithNoContactRoles.clone();
 			for(Task t: tasks)
 			{
-				Opportunity op = newmap.get(t.WhatID);	// Get the opportunity
+				Opportunity op = newMap.get(t.WhatID);	// Get the opportunity
 				// Make sure it's assigned to the right person
 				if(t.OwnerID == op.OwnerID) opsWithoutTasks.remove(op.ID);	
 			}
 			// Now create new tasks
 			List<Task> newTasks = new List<Task>();
-			for(ID opId: opsWithoutTasks)
+			for(ID opid: opsWithoutTasks)
 			{
 				Opportunity op = newMap.get(opid);
 				newTasks.add(new Task(OwnerID = op.OwnerID, Type='Other', 
-					WhatID = op.ID, Subject = 'Assign Primary Contact', 
-					ActivityDate = Date.Today().AddDays(3) ));
+							WhatID = op.ID, Subject = 'Assign Primary Contact', 
+							ActivityDate = Date.Today().AddDays(3) ));
 			}
 			if(newTasks.size()>0) insert newTasks;
 			
@@ -130,17 +126,19 @@ public with sharing class BulkPatterns {
 					contactIdsForOps.add(ocr.ContactID);
 			}
 			
-			// Now get the totals count and primary count for each contact by 
-			// using aggregate functions and grouping by contact
-			List<AggregateResult> ocrsByContact = [
-				Select ContactID, Count(ID) total 
-				from OpportunityContactRole 
-				where ContactID in :contactIdsForOps 
-				Group By ContactID];
+			// Now get the totals count and primary count for each contact 
+			// by using aggregate functions and grouping by contact
+			List<AggregateResult> ocrsByContact = 
+				[Select ContactID, Count(ID) total 
+					from OpportunityContactRole 
+					where ContactID in :contactIdsForOps 
+					Group By ContactID];
 			List<AggregateResult> primaryOcrsByContact = 
 				[Select ContactID, Count(ID) total 
-				from OpportunityContactRole where IsPrimary=true 
-				and ContactID in :contactIdsForOps Group By ContactID];
+					from OpportunityContactRole 
+					where IsPrimary=true 
+					and ContactID in :contactIdsForOps 
+					Group By ContactID];
 
 			// Let's get the totals by contact for a faster loop
 			Map<ID, Integer> totalsByContact = new Map<ID, Integer>();
@@ -150,18 +148,18 @@ public with sharing class BulkPatterns {
 				Integer.ValueOf(ar.get('total')));
 			for(AggregateResult ar: primaryOcrsByContact) 
 				primaryByContact.put((ID)ar.get('ContactID'), 
-				Integer.ValueOf(ar.get('total')));
+							Integer.ValueOf(ar.get('total')));
 
 			List<Opportunity> opportunitiesWithoutPrimary = 
-				[Select ID ,(Select ID, ContactID, IsPrimary 
-				from OpportunityContactRoles) from Opportunity 
-				where ID in :opsWithNoPrimaryWithContactRoles];
+				[Select ID ,
+				(Select ID, ContactID, IsPrimary from OpportunityContactRoles) 
+				from Opportunity where ID in :OpsWithNoPrimaryWithContactRoles];
 			List<OpportunityContactRole> ocrsToUpdate = 
 				new List<OpportunityContactRole>();
 			
-			for(Opportunity op: OpportunitiesWithoutPrimary)
+			for(Opportunity op: opportunitiesWithoutPrimary)
 			{
-				OpportunityContactRole bestocr = null;
+				OpportunityContactRole bestOcr = null;
 				Integer primaryCount = 0;
 				Integer totalCount = 0;
 				for(OpportunityContactRole opOcrs: op.OpportunityContactRoles)
@@ -185,5 +183,6 @@ public with sharing class BulkPatterns {
 			update ocrsToUpdate;
 		}		
 	}
+
 
 }
