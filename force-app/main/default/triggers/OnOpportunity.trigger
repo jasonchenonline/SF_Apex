@@ -27,9 +27,9 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 trigger OnOpportunity on Opportunity (after update) {
-	BulkPatterns.afterUpdateOpportunityCommon(trigger.new, trigger.newmap, trigger.oldmap);
+	BulkPatterns.afterUpdateOpportunityBetterQueries(trigger.new, trigger.newmap, trigger.oldmap);
 
-	// Comment the preceding line and uncomment this one to test the afterUpdateOpportunitySets approach
-	// BulkPatterns.afterUpdateOpportunitySets(trigger.new, trigger.newmap, trigger.oldmap);
+	// Comment the preceding line and uncomment this one to test the afterUpdateOpportunityBetterQueries2 approach
+	// BulkPatterns.afterUpdateOpportunityBetterQueries2(trigger.new, trigger.newmap, trigger.oldmap);
 
 }
