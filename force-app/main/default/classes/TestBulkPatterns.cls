@@ -33,8 +33,7 @@ public class TestBulkPatterns {
     public static void bulkOpportunityTest() {
         List<Opportunity> ops = new List<Opportunity>();
         // Note, you may need to adjust these numbers
-		//initTestObjects(ops, 100, 15, 15, 40);
-        initTestObjects(ops, 50, 10, 10, 20);   // for the awful example
+		initTestObjects(ops, 100, 15, 15, 40);
         Test.StartTest();
         for(Opportunity op: ops) op.StageName = 'Qualification';
         update ops;
@@ -47,8 +46,7 @@ public class TestBulkPatterns {
     @istest
     static void createTaskTest()
     {
-    	//Integer numberOfOpportunities = 100;
-    	Integer numberOfOpportunities = 50; // for the awful example
+    	Integer numberOfOpportunities = 100;
         List<Opportunity> ops = new List<Opportunity>();
 		for(Integer x=0; x<numberOfOpportunities; x++)
 		{
