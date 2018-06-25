@@ -28,27 +28,57 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 public with sharing class TriggerDMLSupport {
     
     public static Boolean updatingPendingObjects = false;
-    public static Map<ID, Opportunity> opsToUpdate = new Map<ID, Opportunity>();
+    private static Map<Schema.SObjectType, Map<ID, SObject>> objectsToUpdate = new Map<Schema.SObjectType, Map<ID, SObject>>();
 
-    // Return a map of updatable opportunity records to use in after triggers
-    public static Map<ID, Opportunity> getUpdatableOpportunities(Set<ID> opIds)
+    // Return a map of updatable SObject records
+    public static Map<ID, SObject> getUpdatableObjects(Schema.SObjectType objType, Set<ID> objIds)
     {
-        Map<ID, Opportunity> ops = new Map<ID, Opportunity>();
-        for(ID opid: opIDs) ops.put(opid, new Opportunity(ID = opid));
-        return ops;
+        Map<ID, SObject> objMap = objectsToUpdate.get(objType);
+        if(objMap==null)
+        {
+            objMap = new Map<ID, SObject>();
+            objectsToUpdate.put(objType, objMap);
+        }
+        Map<ID, SObject> results = new Map<ID, SObject>();
+        for(ID objId: objIds) results.put(objID, (objMap.containsKey(objId))? objMap.get(objId): objType.newSObject(objId));
+        return results;
     }
 
-    public static void updatePendingOpportunties()
+    // We assume all objects are of the same type
+    // You can add some error checking here just in case
+    public static void queueForUpdates(List<SObject> toUpdate)
+    {
+        if(toUpdate==null || toUpdate.size()==0) return;
+        Schema.SObjectType objType = toUpdate[0].id.getSobjectType();
+        Map<ID, SObject> mapForSObjectType = objectsToUpdate.get(objType);
+        mapForSObjectType.putAll(toUpdate);
+    }
+
+    private static Boolean updatesPending()
+    {
+        for(Schema.SObjectType objType: objectsToUpdate.keyset())
+        {
+            if(objectsToUpdate.get(objType).size()>0) return true;
+        }
+        return false;
+    }
+
+    public static void updatePendingObjects()
     {
         if(!updatingPendingObjects) 
         {
-            while(opsToUpdate.size()>0)
+            while(updatesPending())
             {
-                List<Opportunity> updatingList = opsToUpdate.values();
-                opsToUpdate = new Map<ID, Opportunity>(); // Clear this to prevent multiple attempts to update
-                updatingPendingObjects = true;
-                update updatingList;
-                updatingPendingObjects = false;
+                for(Schema.SObjectType objType: objectsToUpdate.keyset())
+                {
+                    Map<ID, SObject> objectToUpdateMap = objectsToUpdate.get(objType);
+                    if(objectToUpdateMap.size()==0) continue;
+                    List<SObject> updatingList = objectToUpdateMap.values();
+                    objectsToUpdate.put(objType, new Map<ID, SObject>());
+                    updatingPendingObjects = true;
+                    update updatingList;
+                    updatingPendingObjects = false;
+                }
             }
         }
     }

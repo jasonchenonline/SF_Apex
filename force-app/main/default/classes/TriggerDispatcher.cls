@@ -25,7 +25,40 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF 
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+public with sharing class TriggerDispatcher {
 
-trigger OnOpportunity on Opportunity (before insert, after insert, after update) {
-    TriggerDispatcher.handleTriggers(trigger.operationType, trigger.new, trigger.newMap, trigger.old, trigger.oldMap);
+  public static void handleTriggers(TriggerOperation triggerType, List<SObject> newList, 
+			Map<ID, SObject> newMap, List<SObject> oldList, 
+			Map<ID,SObject> oldMap)
+    {
+        if(TriggerDMLSupport.updatingPendingObjects) return;
+
+        SObject firstObject = (triggerType == TriggerOperation.AFTER_DELETE || triggerType== TriggerOperation.BEFORE_DELETE)? 
+            oldList[0]: newList[0];
+        
+        switch on firstObject
+        {
+            when Opportunity obj
+            {
+                // You can dispatch to different handlers by trigger type as well
+                TriggerArchitectureClass1.entry1(triggerType, 
+                    (List<Opportunity>)newList, castMapToOpportunities(newMap), 
+                    (List<Opportunity>)oldList, castMapToOpportunities(oldMap));
+                TriggerArchitectureClass2.entry1(triggerType,
+                    (List<Opportunity>)newList, castMapToOpportunities(newMap),
+                    (List<Opportunity>)oldList, castMapToOpportunities(oldMap));
+            }
+        }
+
+        TriggerDMLSupport.updatePendingObjects();
+
+    }
+
+    // Helper function, since we can't cast directly from a map of ID,SObject to a specific type
+    public static Map<ID, Opportunity> castMapToOpportunities(Map<ID, SObject> sourceMap)
+    {
+        if(sourceMap==null) return null;
+        return new Map<ID, Opportunity>((List<Opportunity>)sourceMap.values());
+    }
+
 }

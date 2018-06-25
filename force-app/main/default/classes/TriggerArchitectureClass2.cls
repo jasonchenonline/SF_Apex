@@ -29,48 +29,40 @@ public with sharing class TriggerArchitectureClass2 {
 
     public static void entry1(TriggerOperation triggerType, List<Opportunity> newlist, 
 			Map<ID, Opportunity> newMap, List<Opportunity> oldList, 
-			Map<ID,Opportunity> oldMap, Map<ID, Opportunity> updateableMap)
+			Map<ID,Opportunity> oldMap)
 	{
-        List<Schema.PicklistEntry> opportunityStages = Opportunity.StageName.getDescribe().getPickListValues();
-
-        for(Opportunity op:newlist)
+        Map<ID, Opportunity> updateableMap;
+        List<Opportunity> opsToUpdate;
+        if(triggertype == TriggerOperation.AFTER_INSERT || triggertype == TriggerOperation.AFTER_UPDATE)
         {
-            Opportunity updateableOp = (updateableMap== null)? null: updateableMap.get(op.id);
-            system.debug('Existing opportunity amount: ' + op.amount);
-            switch on triggerType {
-                when BEFORE_INSERT
-                {
-                    // Do some processing here
-                    // No need to add entries to the objectstoupdate map in before triggers
-                    op.amount = 10;
-                }
-                when AFTER_INSERT
-                {
-                    // Do some processing here
-                    // Add entries to the dispatcher static variable if they need to be updated
-                    Decimal targetAmount = 20;
-                    if(op.Amount!= targetAmount)
-                    {
-                        updateableOp.Amount = targetAmount;
-                        // Mark for update if changed
-                        TriggerDMLSupport.opsToUpdate.put(updateableOp.id, updateableOp);
-                    }
-                }
-                when AFTER_UPDATE
-                {
-                    // Do some processing here
-                    // Add entries to the dispatcher static variable if they need to be updated
-                    Decimal targetAmount = 30;
-                    if(op.Amount != targetAmount)
-                    {
-                        updateableOp.Amount = targetAmount;
-                        // Mark for update if changed
-                        TriggerDMLSupport.opsToUpdate.put(updateableOp.id, updateableOp);
-                    }
-                }
-            }
+            updateableMap = TriggerDispatcher.castMapToOpportunities(TriggerDMLSupport.getUpdatableObjects(Opportunity.SObjectType, newMap.keyset()));
+            opsToUpdate = new List<Opportunity>();
         }
 
+        switch on triggerType {
+            when BEFORE_INSERT
+            {
+                for(Opportunity op:newlist)
+                {
+                    op.Amount = 10;
 
+                }
+            }
+            When AFTER_INSERT, AFTER_UPDATE
+            {
+                Decimal targetAmount = (triggerType== TriggerOperation.AFTER_INSERT)? 20 : 30;
+                for(Opportunity op:newlist)
+                {
+                    if(op.Amount!= targetAmount)
+                    {
+                        Opportunity updateableOp = updateableMap.get(op.id);
+                        updateableOp.Amount = targetAmount;
+                        // Mark for update if changed
+                        opsToUpdate.add(updateableOp);
+                    }
+                }  
+            }
+        }
+    TriggerDMLSupport.queueForUpdates(opsToUpdate);
 	}
 }

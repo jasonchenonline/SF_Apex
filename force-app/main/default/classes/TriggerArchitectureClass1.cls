@@ -30,48 +30,46 @@ public with sharing class TriggerArchitectureClass1 {
 	
     public static void entry1(TriggerOperation triggerType, List<Opportunity> newlist, 
 			Map<ID, Opportunity> newMap, List<Opportunity> oldList, 
-			Map<ID,Opportunity> oldMap, Map<ID, Opportunity> updateableMap)
+			Map<ID,Opportunity> oldMap)
 	{
         List<OpportunityStage> opStages = [Select ID, DefaultProbability, MasterLabel from OpportunityStage Order By SortOrder Asc];
 
-        for(Opportunity op:newlist)
+        Map<ID, Opportunity> updateableMap;
+        List<Opportunity> opsToUpdate;
+        if(triggertype == TriggerOperation.AFTER_INSERT || triggertype == TriggerOperation.AFTER_UPDATE)
         {
-            Opportunity updateableOp = (updateableMap== null)? null: updateableMap.get(op.id);
-            system.debug('Existing opportunity stage: ' + op.stagename);
-            switch on triggerType {
-                when BEFORE_INSERT
+            updateableMap = TriggerDispatcher.castMapToOpportunities(TriggerDMLSupport.getUpdatableObjects(Opportunity.SObjectType, newMap.keyset()));
+            opsToUpdate = new List<Opportunity>();
+        }
+
+        switch on triggerType {
+            when BEFORE_INSERT
+            {
+                for(Opportunity op:newlist)
                 {
                     // Do some processing here
                     // No need to add entries to the objectstoupdate map in before triggers
                     op.stageName = opStages[1].MasterLabel;
                 }
-                when AFTER_INSERT
+            }
+            When AFTER_INSERT, AFTER_UPDATE
+            {
+                String targetStage = (triggerType== TriggerOperation.AFTER_INSERT)? 
+                    opStages[2].MasterLabel:opStages[3].MasterLabel;
+                for(Opportunity op:newlist)
                 {
-                    // Do some processing here
-                    // Add entries to the dispatcher static variable if they need to be updated
-                    String targetStage = opStages[2].MasterLabel;
                     if(op.stageName!= targetStage)
                     {
+                        Opportunity updateableOp = updateableMap.get(op.id);
                         updateableOp.stageName = targetStage;
                         // Mark for update if changed
-                        TriggerDMLSupport.opsToUpdate.put(updateableOp.id, updateableOp);
+                        opsToUpdate.add(updateableOp);
                     }
-                }
-                when AFTER_UPDATE
-                {
-                    // Do some processing here
-                    // Add entries to the dispatcher static variable if they need to be updated
-                    String targetStage = opStages[3].MasterLabel;
-                    if(op.stageName != targetStage)
-                    {
-                        updateableOp.stageName = targetStage;
-                        // Mark for update if changed
-                        TriggerDMLSupport.opsToUpdate.put(updateableOp.id, updateableOp);
-                    }
-                }
+                }  
             }
         }
 
+        TriggerDMLSupport.queueForUpdates(opsToUpdate);
 
 	}
 
