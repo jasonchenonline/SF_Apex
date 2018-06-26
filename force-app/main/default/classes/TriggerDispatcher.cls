@@ -27,11 +27,14 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 public with sharing class TriggerDispatcher {
 
-  public static void handleTriggers(TriggerOperation triggerType, List<SObject> newList, 
+    public static Boolean inTriggerArchitectureClass1 = false;
+    public static Boolean inTriggerArchitectureClass2 = false;
+    public static Boolean inWatchForStageUpdates = false;
+
+    public static void handleTriggers(TriggerOperation triggerType, List<SObject> newList, 
 			Map<ID, SObject> newMap, List<SObject> oldList, 
 			Map<ID,SObject> oldMap)
     {
-        if(TriggerDMLSupport.updatingPendingObjects) return;
 
         SObject firstObject = (triggerType == TriggerOperation.AFTER_DELETE || triggerType== TriggerOperation.BEFORE_DELETE)? 
             oldList[0]: newList[0];
@@ -41,12 +44,22 @@ public with sharing class TriggerDispatcher {
             when Opportunity obj
             {
                 // You can dispatch to different handlers by trigger type as well
+                inTriggerArchitectureClass1 = true;
                 TriggerArchitectureClass1.entry1(triggerType, 
                     (List<Opportunity>)newList, castMapToOpportunities(newMap), 
                     (List<Opportunity>)oldList, castMapToOpportunities(oldMap));
+                inTriggerArchitectureClass1 = false;
+                inTriggerArchitectureClass2 = true;
                 TriggerArchitectureClass2.entry1(triggerType,
                     (List<Opportunity>)newList, castMapToOpportunities(newMap),
                     (List<Opportunity>)oldList, castMapToOpportunities(oldMap));
+                inTriggerArchitectureClass2 = false;
+                inWatchForStageUpdates = true;
+                WatchForStageUpdates.processStageUpdate(triggerType,
+                    (List<Opportunity>)newList, castMapToOpportunities(newMap),
+                    (List<Opportunity>)oldList, castMapToOpportunities(oldMap));
+                inWatchForStageUpdates = false;
+
             }
         }
 

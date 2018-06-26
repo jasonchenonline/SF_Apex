@@ -25,46 +25,42 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF 
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-public with sharing class TriggerArchitectureClass2 {
-
-    public static void entry1(TriggerOperation triggerType, List<Opportunity> newlist, 
+/*
+    This class watches for the opportunity probability to go over 20%. If so, it creates a task
+*/
+public with sharing class WatchForStageUpdates {
+  
+    public static void processStageUpdate(TriggerOperation triggerType, List<Opportunity> newlist, 
 			Map<ID, Opportunity> newMap, List<Opportunity> oldList, 
 			Map<ID,Opportunity> oldMap)
 	{
-        if(TriggerDMLSupport.updatingPendingObjects || TriggerDispatcher.inWatchForStageUpdates) return;
-
-        Map<ID, Opportunity> updateableMap;
-        List<Opportunity> opsToUpdate;
-        if(triggertype == TriggerOperation.AFTER_INSERT || triggertype == TriggerOperation.AFTER_UPDATE)
-        {
-            updateableMap = TriggerDispatcher.castMapToOpportunities(TriggerDMLSupport.getUpdatableObjects(Opportunity.SObjectType, newMap.keyset()));
-            opsToUpdate = new List<Opportunity>();
-        }
-
+        
         switch on triggerType {
-            when BEFORE_INSERT
-            {
-                for(Opportunity op:newlist)
-                {
-                    op.Amount = 10;
-
-                }
-            }
             When AFTER_INSERT, AFTER_UPDATE
             {
-                Decimal targetAmount = (triggerType== TriggerOperation.AFTER_INSERT)? 20 : 30;
+                List<Task> newTasks = new List<Task>();
+                List<Opportunity> opsToUpdate = new List<Opportunity>();
+
                 for(Opportunity op:newlist)
                 {
-                    if(op.Amount!= targetAmount)
+                    if((triggerType== TriggerOperation.AFTER_INSERT || oldMap.get(op.id).Probability <=20) && op.Probability>50)
                     {
-                        Opportunity updateableOp = updateableMap.get(op.id);
-                        updateableOp.Amount = targetAmount;
-                        // Mark for update if changed
-                        opsToUpdate.add(updateableOp);
+				        newTasks.add(
+                            new Task(ownerId = op.OwnerID, 
+                                WhatID = op.id, 
+                                ActivityDate = Date.Today().addDays(2), 
+                                Subject='Opportunity stage update', 
+                                Type='Other'));
+                        Opportunity updatingOp = new Opportunity(Id = op.id);
+                        updatingOp.Description = ((op.Description==null)? '': op.Description) + ' Stage update task on ' + Date.Today().format();
+                        opsToUpdate.add(updatingOp);
                     }
                 }  
+            if(newTasks.size()>0) insert newtasks;
+            if(opsToUpdate.size()>0) update opsToUpdate;
             }
         }
-    TriggerDMLSupport.queueForUpdates(opsToUpdate);
+
 	}
+
 }

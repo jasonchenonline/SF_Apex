@@ -54,6 +54,36 @@ public with sharing class TestTriggersExample {
         test.stopTest();
     }
 
+    @istest
+    public static void testStageUpdates()
+    {
+    	List<Opportunity> ops = initOpportunities(5);
+        List<Schema.PicklistEntry> opportunityStages = Opportunity.StageName.getDescribe().getPickListValues();
+        
+        Test.startTest();
+        insert ops;
+        ops = [Select ID, StageName, Amount from Opportunity where id in :ops];
+        for(Opportunity op: ops)
+        {
+            system.assertEquals(opportunityStages[2].getValue(), op.stageName);
+            system.assertEquals(20, op.Amount);
+        }
+        // Do an explicit update to a high probability stage
+        String highProbabilityStage = opportunityStages[opportunityStages.size()-3].getValue();
+        for(Opportunity op:ops) op.StageName = highProbabilityStage;
+        update ops;
+        test.stopTest();
+        ops = [Select ID, StageName, Amount from Opportunity where id in :ops];
+        for(Opportunity op: ops)
+        {
+            system.assertEquals(highProbabilityStage, op.stageName);
+            system.assertEquals(30, op.Amount);
+        } 
+        // Make sure one task was created for each opportunity
+        List<Task> tasks = [Select ID from Task];
+        System.assertEquals(5, tasks.size());
+    }
+
     public static List<Opportunity> initOpportunities(Integer numberOfOpportunities)
     {
 	    List<Opportunity> ops = new List<Opportunity>();

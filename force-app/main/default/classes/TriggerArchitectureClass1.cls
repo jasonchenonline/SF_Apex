@@ -32,7 +32,12 @@ public with sharing class TriggerArchitectureClass1 {
 			Map<ID, Opportunity> newMap, List<Opportunity> oldList, 
 			Map<ID,Opportunity> oldMap)
 	{
+        if(TriggerDMLSupport.updatingPendingObjects || TriggerDispatcher.inWatchForStageUpdates) return;
+
         List<OpportunityStage> opStages = [Select ID, DefaultProbability, MasterLabel from OpportunityStage Order By SortOrder Asc];
+        Map<String, Integer> opLabelsToPosition = new Map<String,Integer>();
+        for(Integer x = 0; x< opStages.size(); x++)
+            opLabelsToPosition.put(opStages[x].MasterLabel, x);
 
         Map<ID, Opportunity> updateableMap;
         List<Opportunity> opsToUpdate;
@@ -58,7 +63,7 @@ public with sharing class TriggerArchitectureClass1 {
                     opStages[2].MasterLabel:opStages[3].MasterLabel;
                 for(Opportunity op:newlist)
                 {
-                    if(op.stageName!= targetStage)
+                    if(op.stageName!= targetStage && opLabelsToPosition.get(op.stageName) < opLabelsToPosition.get(targetStage) )
                     {
                         Opportunity updateableOp = updateableMap.get(op.id);
                         updateableOp.stageName = targetStage;
