@@ -26,13 +26,17 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-public with sharing class TriggerArchitectureClass1 {
+public with sharing class TriggerArchitectureClass1 implements TriggerDispatcher.ITriggerEntry {
 	
-    public static void entry1(TriggerOperation triggerType, List<Opportunity> newlist, 
-			Map<ID, Opportunity> newMap, List<Opportunity> oldList, 
-			Map<ID,Opportunity> oldMap)
+    public void mainEntry(TriggerOperation triggerType, Schema.SObjectType objectType,
+             List<SObject> newObjlist, Map<ID, SObject> newObjMap, 
+             List<SObject> oldObjList, Map<ID,SObject> oldObjMap)
 	{
-        if(TriggerDMLSupport.updatingPendingObjects || TriggerDispatcher.inWatchForStageUpdates) return;
+        if(objectType!= Opportunity.SObjectType) return;
+        List<Opportunity> newList = (List<Opportunity>)newObjList;
+        List<Opportunity> oldList = (List<Opportunity>)oldObjList;
+        Map<ID, Opportunity> newMap = TriggerDispatcher.castMapToOpportunities(newObjMap);
+        Map<ID, Opportunity> oldMap = TriggerDispatcher.castMapToOpportunities(oldObjMap);
 
         List<OpportunityStage> opStages = [Select ID, DefaultProbability, MasterLabel from OpportunityStage Order By SortOrder Asc];
         Map<String, Integer> opLabelsToPosition = new Map<String,Integer>();
@@ -77,6 +81,19 @@ public with sharing class TriggerArchitectureClass1 {
         TriggerDMLSupport.queueForUpdates(opsToUpdate);
 
 	}
+
+    public void inProgressEntry(TriggerOperation triggerType, Schema.SObjectType objectType,
+             List<SObject> newObjlist, Map<ID, SObject> newObjMap, 
+             List<SObject> oldObjList, Map<ID,SObject> oldObjMap)
+	{
+    }
+
+    public void inDmlEntry(TriggerOperation triggerType, Schema.SObjectType objectType,
+             List<SObject> newObjlist, Map<ID, SObject> newObjMap, 
+             List<SObject> oldObjList, Map<ID,SObject> oldObjMap)
+	{
+    }
+
 
 
 }

@@ -28,13 +28,27 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /*
     This class watches for the opportunity probability to go over 20%. If so, it creates a task
 */
-public with sharing class WatchForStageUpdates {
+public with sharing class WatchForStageUpdates  implements TriggerDispatcher.ITriggerEntry {
   
-    public static void processStageUpdate(TriggerOperation triggerType, List<Opportunity> newlist, 
-			Map<ID, Opportunity> newMap, List<Opportunity> oldList, 
-			Map<ID,Opportunity> oldMap)
+    public void mainEntry(TriggerOperation triggerType, Schema.SObjectType objectType,
+             List<SObject> newObjlist, Map<ID, SObject> newObjMap, 
+             List<SObject> oldObjList, Map<ID,SObject> oldObjMap)
+    {
+        processStageUpdate(triggerType, objectType,
+             newObjlist, newObjMap, 
+             oldObjList, oldObjMap);
+    }
+
+    public void processStageUpdate(TriggerOperation triggerType, Schema.SObjectType objectType,
+             List<SObject> newObjlist, Map<ID, SObject> newObjMap, 
+             List<SObject> oldObjList, Map<ID,SObject> oldObjMap)
 	{
-        
+        if(objectType!= Opportunity.SObjectType) return;
+        List<Opportunity> newList = (List<Opportunity>)newObjList;
+        List<Opportunity> oldList = (List<Opportunity>)oldObjList;
+        Map<ID, Opportunity> newMap = TriggerDispatcher.castMapToOpportunities(newObjMap);
+        Map<ID, Opportunity> oldMap = TriggerDispatcher.castMapToOpportunities(oldObjMap);
+
         switch on triggerType {
             When AFTER_INSERT, AFTER_UPDATE
             {
@@ -62,5 +76,23 @@ public with sharing class WatchForStageUpdates {
         }
 
 	}
+
+    public void inProgressEntry(TriggerOperation triggerType, Schema.SObjectType objectType,
+             List<SObject> newObjlist, Map<ID, SObject> newObjMap, 
+             List<SObject> oldObjList, Map<ID,SObject> oldObjMap)
+	{
+        TriggerDispatcher.invokeMainEntry(new TriggerArchitectureClass2(), 
+            triggerType, objectType, newObjList, newObjMap, oldObjList, oldObjMap);
+    }
+
+    public void inDmlEntry(TriggerOperation triggerType, Schema.SObjectType objectType,
+             List<SObject> newObjlist, Map<ID, SObject> newObjMap, 
+             List<SObject> oldObjList, Map<ID,SObject> oldObjMap)
+	{
+        processStageUpdate(triggerType, objectType,
+             newObjlist, newObjMap, 
+             oldObjList, oldObjMap);
+    }
+
 
 }

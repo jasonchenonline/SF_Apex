@@ -27,9 +27,28 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 public with sharing class TriggerDispatcher {
 
-    public static Boolean inTriggerArchitectureClass1 = false;
-    public static Boolean inTriggerArchitectureClass2 = false;
-    public static Boolean inWatchForStageUpdates = false;
+	public static ITriggerEntry activeFunction = null;    
+
+	public interface ITriggerEntry
+	{
+		void mainEntry(TriggerOperation triggerType, 
+                        Schema.SObjectType objectType,
+                        List<SObject> newList, Map<ID, SObject> newMap, 
+						List<SObject> oldList, Map<ID,SObject> oldMap);
+
+		void inProgressEntry(TriggerOperation triggerType,
+                        Schema.SObjectType objectType,
+						List<SObject> newList, 
+						Map<ID, SObject> newMap, 
+						List<SObject> oldList, Map<ID,SObject> oldMap);
+
+		void inDmlEntry(TriggerOperation triggerType,
+                        Schema.SObjectType objectType,
+						List<SObject> newList, 
+						Map<ID, SObject> newMap, 
+						List<SObject> oldList, Map<ID,SObject> oldMap);
+
+	}
 
     public static void handleTriggers(TriggerOperation triggerType, List<SObject> newList, 
 			Map<ID, SObject> newMap, List<SObject> oldList, 
@@ -39,32 +58,48 @@ public with sharing class TriggerDispatcher {
         SObject firstObject = (triggerType == TriggerOperation.AFTER_DELETE || triggerType== TriggerOperation.BEFORE_DELETE)? 
             oldList[0]: newList[0];
         
+        if(activeFunction!=null)
+        {
+            // Active function always gets all triggers
+            activeFunction.inProgressEntry(triggerType, firstObject.getSObjectType(), newList, newMap, oldList, oldMap);
+            return;
+        }
+
+        if(TriggerDMLSupport.updatingPendingObjects)
+        {
+            // During internal DML update, forward only to those classes that need to see the trigger
+            activeFunction = new WatchForStageUpdates();
+            activeFunction.inDmlEntry(triggerType, firstObject.getSObjectType(), newList, newMap, oldList, oldMap);
+            activeFunction = null;
+            return;
+        }
+
         switch on firstObject
         {
             when Opportunity obj
             {
-                // You can dispatch to different handlers by trigger type as well
-                inTriggerArchitectureClass1 = true;
-                TriggerArchitectureClass1.entry1(triggerType, 
-                    (List<Opportunity>)newList, castMapToOpportunities(newMap), 
-                    (List<Opportunity>)oldList, castMapToOpportunities(oldMap));
-                inTriggerArchitectureClass1 = false;
-                inTriggerArchitectureClass2 = true;
-                TriggerArchitectureClass2.entry1(triggerType,
-                    (List<Opportunity>)newList, castMapToOpportunities(newMap),
-                    (List<Opportunity>)oldList, castMapToOpportunities(oldMap));
-                inTriggerArchitectureClass2 = false;
-                inWatchForStageUpdates = true;
-                WatchForStageUpdates.processStageUpdate(triggerType,
-                    (List<Opportunity>)newList, castMapToOpportunities(newMap),
-                    (List<Opportunity>)oldList, castMapToOpportunities(oldMap));
-                inWatchForStageUpdates = false;
+                List<ITriggerEntry> opportunityHandlers = 
+                    new List<ITriggerEntry>{ new TriggerArchitectureClass1(), new TriggerArchitectureClass2(), new WatchForStageUpdates()};
 
+                for(ITriggerEntry handler: opportunityHandlers)
+                {
+                    invokeMainEntry(handler, triggerType, firstObject.getSObjectType(), newList, newMap, oldList, oldMap);
+                }
             }
         }
 
         TriggerDMLSupport.updatePendingObjects();
 
+    }
+
+    public static void invokeMainEntry(
+        ITriggerEntry handler, TriggerOperation triggerType, Schema.SObjectType objectType,
+        List<SObject> newList, Map<ID, SObject> newMap, 
+        List<SObject> oldList, Map<ID,SObject> oldMap)
+    {
+        ITriggerEntry oldActiveFunction = activeFunction;
+        handler.mainEntry(triggerType, objectType, newList, newMap, oldList, oldMap);
+        activeFunction = oldActiveFunction;
     }
 
     // Helper function, since we can't cast directly from a map of ID,SObject to a specific type
@@ -73,5 +108,9 @@ public with sharing class TriggerDispatcher {
         if(sourceMap==null) return null;
         return new Map<ID, Opportunity>((List<Opportunity>)sourceMap.values());
     }
+
+
+
+
 
 }
