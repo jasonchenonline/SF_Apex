@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workflow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fieldUpdates>
+        <fullName>Set_Description_Update_Date</fullName>
+        <field>Description_Updated__c</field>
+        <formula>Now()</formula>
+        <name>Set Description Update Date</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Formula</operation>
+        <protected>false</protected>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Set_Next_Step</fullName>
+        <field>NextStep</field>
+        <formula>"Pay attention!"</formula>
+        <name>Set Next Step</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Formula</operation>
+        <protected>false</protected>
+    </fieldUpdates>
+    <rules>
+        <fullName>Description Changed</fullName>
+        <actions>
+            <name>Set_Description_Update_Date</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <active>false</active>
+        <description>Fire when the description is changed</description>
+        <formula>ISCHANGED(Description) &amp;&amp; NOT(ISCHANGED( Internal_Update__c ))</formula>
+        <triggerType>onAllChanges</triggerType>
+    </rules>
+    <rules>
+        <fullName>Probability Over 50</fullName>
+        <actions>
+            <name>Set_Next_Step</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <active>false</active>
+        <criteriaItems>
+            <field>Opportunity.Probability</field>
+            <operation>greaterThan</operation>
+            <value>50</value>
+        </criteriaItems>
+        <description>Fire when probability goes over 50</description>
+        <triggerType>onAllChanges</triggerType>
+    </rules>
+</Workflow>

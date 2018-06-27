@@ -29,7 +29,9 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     This class watches for the opportunity probability to go over 20%. If so, it creates a task
 */
 public with sharing class WatchForStageUpdates  implements TriggerDispatcher.ITriggerEntry {
-  
+
+   	private static Map<ID, Double> probabilityOverrides = null;
+
     public void mainEntry(TriggerOperation triggerType, Schema.SObjectType objectType,
              List<SObject> newObjlist, Map<ID, SObject> newObjMap, 
              List<SObject> oldObjList, Map<ID,SObject> oldObjMap)
@@ -49,6 +51,8 @@ public with sharing class WatchForStageUpdates  implements TriggerDispatcher.ITr
         Map<ID, Opportunity> newMap = TriggerDispatcher.castMapToOpportunities(newObjMap);
         Map<ID, Opportunity> oldMap = TriggerDispatcher.castMapToOpportunities(oldObjMap);
 
+		if(probabilityOverrides==null) probabilityOverrides = new Map<ID, Double>();
+
         switch on triggerType {
             When AFTER_INSERT, AFTER_UPDATE
             {
@@ -57,7 +61,13 @@ public with sharing class WatchForStageUpdates  implements TriggerDispatcher.ITr
 
                 for(Opportunity op:newlist)
                 {
-                    if((triggerType== TriggerOperation.AFTER_INSERT || oldMap.get(op.id).Probability <=20) && op.Probability>50)
+        			Double oldProbability = (probabilityOverrides.containskey(op.id))? 
+				                            probabilityOverrides.get(op.id) : 
+				                            ((oldMap==null)? 0: oldMap.get(op.id).Probability);
+                    system.debug('old probability ' + 
+                                ((oldMap!=null)? String.valueOf(oldMap.get(op.id).Probability): 'n/a') + 
+			                    ' new probability ' + op.Probability);
+                    if((triggerType== TriggerOperation.AFTER_INSERT || oldProbability <=20) && op.Probability>50)
                     {
 				        newTasks.add(
                             new Task(ownerId = op.OwnerID, 
@@ -67,7 +77,10 @@ public with sharing class WatchForStageUpdates  implements TriggerDispatcher.ITr
                                 Type='Other'));
                         Opportunity updatingOp = new Opportunity(Id = op.id);
                         updatingOp.Description = ((op.Description==null)? '': op.Description) + ' Stage update task on ' + Date.Today().format();
+                        updatingOp.Internal_Update__c = 'WatchForStageUpdates - ' + String.ValueOf(DateTime.Now().getTime());
                         opsToUpdate.add(updatingOp);
+                        if(oldProbability != op.Probability) 
+				            probabilityOverrides.put(op.id, op.Probability);
                     }
                 }  
             if(newTasks.size()>0) insert newtasks;
