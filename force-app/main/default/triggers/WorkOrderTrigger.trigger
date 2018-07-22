@@ -27,5 +27,5 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 trigger WorkOrderTrigger on WorkOrder (before insert, before update) {
-	GoingAsync1.handleTrigger2(trigger.new, trigger.oldMap, trigger.operationType);
+	GoingAsync1.handleTrigger3(trigger.new, trigger.oldMap, trigger.operationType);
 }

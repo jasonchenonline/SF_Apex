@@ -30,53 +30,22 @@ public class GoingAsync1 {
 	// Simple protection from workflows and triggers
 	private static Boolean alreadyProcessed = false;	
 
-	public static void handleTrigger2(List<WorkOrder> workOrderList, 
-		Map<ID, WorkOrder> oldMap, TriggerOperation operation)
+	public static void handleTrigger3(List<WorkOrder> workOrderList, 
+		Map<ID, WorkOrder> oldmap, TriggerOperation operation)
 	{
 		if(alreadyProcessed) return;
 		alreadyProcessed = true;
+		Boolean foundOne = false;
 		for(WorkOrder wo:workOrderList)
 		{
 			if(operation == TriggerOperation.BEFORE_INSERT || wo.Description!= oldMap.get(wo.id).Description) 
-				wo.TranslationPending__c = true; 
+			{
+				wo.TranslationPending__c = true;
+				foundOne = true;
+			} 
 		}
-		secondAttemptRequestAsync();
+		if(foundOne) GoingAsync2.StartBatch(false);
 	}
 
-	public static void secondAttemptRequestAsync()
-	{
-		if(system.isFuture() || system.isBatch() || system.isQueueable()) 
-			secondAttemptSync();
-		else
-		{
-			if(Limits.getFutureCalls()< Limits.getLimitFutureCalls()-3)
-				secondAttemptAsync();
-		}
-	}
-
-	@future(callout=true)
-	private static void secondAttemptAsync()
-	{
-		secondAttemptSync();
-	}
-	
-	public static void secondAttemptSync()
-	{
-		Integer allowedCallouts = Limits.getLimitCallouts() - Limits.getCallouts();
-		if(allowedCallouts<=0) return;
-		List<WorkOrder> workOrdersToUpdate = 
-			[SELECT ID, Description, DescriptionSpanish__c 
-			from WorkOrder 
-			where LastModifiedDate > :DateTime.Now().addHours(-24) 
-			And TranslationPending__c = true LIMIT :allowedCallouts];
-		if(workOrdersToUpdate.size()==0) return;
-		for(WorkOrder wo: workOrdersToUpdate)
-		{
-			wo.DescriptionSpanish__c = SimulatedTranslator.translate(wo.Description);
-			wo.TranslationPending__c = false;
-		}
-		update workOrdersToUpdate;
-		
-	}
 
 }
