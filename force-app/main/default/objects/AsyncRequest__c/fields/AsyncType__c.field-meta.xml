@@ -16,6 +16,11 @@
                 <default>false</default>
                 <label>Translate Work Order</label>
             </value>
+            <value>
+                <fullName>Amount Update</fullName>
+                <default>false</default>
+                <label>Amount Update</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>

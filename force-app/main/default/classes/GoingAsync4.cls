@@ -34,7 +34,8 @@ public without sharing class GoingAsync4
     	List<AsyncRequest__c> requests;
     	try
     	{
-	    	requests = [Select ID, AsyncType__c, Params__c 
+	    	requests = [Select ID, AsyncType__c, Params__c,
+                NewAmount__c, OriginalAmount__c, TargetOpportunity__c  
 	    		from AsyncRequest__c 
 	    		where Error__c = false And
 	    		CreatedById = :UserInfo.getUserId() 
@@ -49,7 +50,10 @@ public without sharing class GoingAsync4
     	{
     		if(currentRequest.AsyncType__c=='Translate Work Order') 
     			translate(currentRequest);
-    		
+
+    		if(currentRequest.AsyncType__c=='Amount Update') 
+    			updateAmounts(currentRequest);
+
     		// Add more here
     		
     		delete currentRequest;
@@ -133,4 +137,50 @@ public without sharing class GoingAsync4
 		}
 		database.update(workOrdersToUpdate, false);
     }
+
+	public void updateAmounts(AsyncRequest__c request)
+	{
+		List<Opportunity> ops = 
+			[Select ID, Amount from Opportunity 
+			 where ID = :request.TargetOpportunity__c for update];
+		if(ops.size()==0) return; // The op may have been deleted 
+		Opportunity op = ops[0];
+		
+		// Implement update scneario here
+
+		// Option #1
+		//op.Amount = request.NewAmount__c;
+
+		// Option #2
+		op.Amount += (request.NewAmount__c - 
+						request.OriginalAmount__c);
+
+		// Option #3
+		if(op.Amount!= request.OriginalAmount__c)
+		{
+			// Concurrency error - throw an exception here
+			throw new AsyncUpdateException(
+				'Amount on opportunity update has changed');
+		}
+
+		try
+		{
+			update op;
+		}
+		catch(DmlException dex)
+		{
+			if(dex.getDmlType(0) == StatusCode.UNABLE_TO_LOCK_ROW)
+			{
+				insert request.clone();
+				return;
+			}
+			throw dex;
+		}
+		// Any other exception will not be caught
+
+	}
+
+    public class AsyncUpdateException extends Exception {}
+
+
 }
