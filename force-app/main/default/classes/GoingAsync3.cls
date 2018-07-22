@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /*Copyright (c) 2018, Daniel Appleman
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -26,6 +25,37 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF 
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-trigger WorkOrderTrigger on WorkOrder (before insert, before update) {
-	GoingAsync1.handleTrigger4(trigger.new, trigger.oldMap, trigger.operationType);
+public without sharing class GoingAsync3 implements queueable, Database.AllowsCallouts {
+
+ 	public void execute(QueueableContext context)
+    {
+    	if(!AppCustomSetting.appEnabled) return; // On/off switch
+    	
+    	Integer allowedCallouts = 
+    		Limits.getLimitCallouts() - Limits.getCallouts();
+   		
+		if(allowedCallouts<=0) return;
+		List<WorkOrder> workOrdersToUpdate = 
+			[SELECT ID, Description, DescriptionSpanish__c 
+			from WorkOrder 
+			where LastModifiedDate > :DateTime.Now().addHours(-24) 
+			And TranslationPending__c = true LIMIT :allowedCallouts];
+		for(WorkOrder wo: workOrdersToUpdate)
+		{
+			wo.DescriptionSpanish__c = SimulatedTranslator.translate(wo.Description);
+			wo.TranslationPending__c = false;
+		}
+		Database.Update(workOrdersToUpdate, false);
+				
+		if(workOrdersToUpdate.size()== allowedCallouts &&
+			Limits.getLimitQueueableJobs() - Limits.getQueueableJobs() > 0)
+			try
+			{
+				system.enqueueJob(new GoingAsync3());
+			} catch(Exception ex)
+			{
+				// Alternate chaining mechanism
+			}
+		
+    }
 }

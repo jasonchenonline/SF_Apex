@@ -30,7 +30,7 @@ public class GoingAsync1 {
 	// Simple protection from workflows and triggers
 	private static Boolean alreadyProcessed = false;	
 
-	public static void handleTrigger3(List<WorkOrder> workOrderList, 
+	public static void handleTrigger4(List<WorkOrder> workOrderList, 
 		Map<ID, WorkOrder> oldmap, TriggerOperation operation)
 	{
 		if(alreadyProcessed) return;
@@ -44,8 +44,8 @@ public class GoingAsync1 {
 				foundOne = true;
 			} 
 		}
-		if(foundOne) GoingAsync2.StartBatch(false);
+		if(foundOne && (Limits.GetLimitQueueableJobs() - Limits.GetQueueableJobs() > 0))
+			system.EnqueueJob(new GoingAsync3());
 	}
-
 
 }
