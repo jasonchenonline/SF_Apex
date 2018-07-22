@@ -30,35 +30,53 @@ public class GoingAsync1 {
 	// Simple protection from workflows and triggers
 	private static Boolean alreadyProcessed = false;	
 
-	public static void handleTrigger1(List<WorkOrder> workOrderList, 
-		Map<ID, WorkOrder> newMap, Map<ID, WorkOrder> oldMap, 
-		TriggerOperation operation)
+	public static void handleTrigger2(List<WorkOrder> workOrderList, 
+		Map<ID, WorkOrder> oldMap, TriggerOperation operation)
 	{
 		if(alreadyProcessed) return;
 		alreadyProcessed = true;
-		if(operation == TriggerOperation.AFTER_INSERT) firstAttempt(newMap.keyset());
+		for(WorkOrder wo:workOrderList)
+		{
+			if(operation == TriggerOperation.BEFORE_INSERT || wo.Description!= oldMap.get(wo.id).Description) 
+				wo.TranslationPending__c = true; 
+		}
+		secondAttemptRequestAsync();
+	}
+
+	public static void secondAttemptRequestAsync()
+	{
+		if(system.isFuture() || system.isBatch() || system.isQueueable()) 
+			secondAttemptSync();
 		else
 		{
-			Set<ID> textChangedIds = new Set<ID>();
-			for(WorkOrder wo: workOrderList)
-			{
-				if(wo.Description!= oldMap.get(wo.id).Description) 
-					textChangedIds.add(wo.id); 
-			}
-			if(textChangedIds.size()>0) firstAttempt(textChangedIds);
+			if(Limits.getFutureCalls()< Limits.getLimitFutureCalls()-3)
+				secondAttemptAsync();
 		}
-
 	}
 
 	@future(callout=true)
-	public static void firstAttempt(Set<ID> workOrderIds)
+	private static void secondAttemptAsync()
 	{
+		secondAttemptSync();
+	}
+	
+	public static void secondAttemptSync()
+	{
+		Integer allowedCallouts = Limits.getLimitCallouts() - Limits.getCallouts();
+		if(allowedCallouts<=0) return;
 		List<WorkOrder> workOrdersToUpdate = 
 			[SELECT ID, Description, DescriptionSpanish__c 
-			from WorkOrder where ID in :workOrderIds];
-		for(WorkOrder wo: workOrdersToUpdate) 
+			from WorkOrder 
+			where LastModifiedDate > :DateTime.Now().addHours(-24) 
+			And TranslationPending__c = true LIMIT :allowedCallouts];
+		if(workOrdersToUpdate.size()==0) return;
+		for(WorkOrder wo: workOrdersToUpdate)
+		{
 			wo.DescriptionSpanish__c = SimulatedTranslator.translate(wo.Description);
+			wo.TranslationPending__c = false;
+		}
 		update workOrdersToUpdate;
+		
 	}
 
 }

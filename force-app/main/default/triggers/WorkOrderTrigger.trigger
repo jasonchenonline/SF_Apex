@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /*Copyright (c) 2018, Daniel Appleman
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -25,7 +26,6 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF 
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-trigger WorkOrderTrigger on WorkOrder (after insert, after update) {
-	GoingAsync1.handleTrigger1(trigger.new, trigger.newMap, 
-		trigger.oldMap, trigger.operationType);
+trigger WorkOrderTrigger on WorkOrder (before insert, before update) {
+	GoingAsync1.handleTrigger2(trigger.new, trigger.oldMap, trigger.operationType);
 }
