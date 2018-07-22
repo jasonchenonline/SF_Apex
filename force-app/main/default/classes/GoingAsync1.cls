@@ -30,22 +30,34 @@ public class GoingAsync1 {
 	// Simple protection from workflows and triggers
 	private static Boolean alreadyProcessed = false;	
 
-	public static void handleTrigger4(List<WorkOrder> workOrderList, 
-		Map<ID, WorkOrder> oldmap, TriggerOperation operation)
+	public static void handleTrigger5(List<WorkOrder> workOrderList, 
+		Map<ID, WorkOrder> newMap, Map<ID, WorkOrder> oldMap, 
+		 TriggerOperation operation)
 	{
 		if(alreadyProcessed) return;
 		alreadyProcessed = true;
-		Boolean foundOne = false;
-		for(WorkOrder wo:workOrderList)
+		List<AsyncRequest__c> newAsyncRequests = new List<AsyncRequest__c>();
+
+		List<String> textChangedIds = new List<ID>();
+		for(WorkOrder wo: workOrderList)
 		{
-			if(operation == TriggerOperation.BEFORE_INSERT || wo.Description!= oldMap.get(wo.id).Description) 
+			if(operation == TriggerOperation.AFTER_INSERT || wo.Description!= oldMap.get(wo.id).Description) 
+				textChangedIds.add(wo.id); 
+			if(textChangedIds.size()>100)
 			{
-				wo.TranslationPending__c = true;
-				foundOne = true;
-			} 
+				newAsyncRequests.add(
+					new AsyncRequest__c(AsyncType__c = 'Translate Work Order',
+							Params__c = string.Join(textChangedIds,',')));
+				textChangedIds.clear();
+			}
 		}
-		if(foundOne && (Limits.GetLimitQueueableJobs() - Limits.GetQueueableJobs() > 0))
-			system.EnqueueJob(new GoingAsync3());
+
+		if(textChangedIds.size()>0)
+			newAsyncRequests.add(
+				new AsyncRequest__c(AsyncType__c = 'Translate Work Order',
+							Params__c = string.Join(textChangedIds,',')));
+
+		insert newAsyncRequests;
 	}
 
 }
