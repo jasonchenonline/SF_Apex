@@ -61,4 +61,46 @@ public class TestGoingAsync {
  
     }
 
+	// Note: testScheduler is intended to test the scheduler code in ScheduledDispatcher and GoingAsync5
+ @isTest
+    private static void testScheduler() {
+ 		
+		// Start with application off
+		AppCustomSetting.testConfig = new AppConfig__c(name='default', appEnabled__c = false, enableDiagnostics__c = true);
+
+ 		List<WorkOrder> wos = new List<WorkOrder>();
+ 		
+ 		for(Integer x = 0; x<bulkTestSize; x++)
+    	{
+    		wos.add(
+    			new WorkOrder(
+    				Subject='work order ' + String.valueOf(x), 
+    				Description = 'This is work order # ' + String.ValueOf(x) ));
+    	}
+
+ 		Test.setMock(HttpCalloutMock.class, 
+ 			new SimulatedTranslator.MockTranslator());
+
+		// Application is off, so while the async records will be created, they won't run
+		insert wos;
+
+    	Test.StartTest();
+		// Turn the app back on
+		AppCustomSetting.testconfig.appEnabled__c = true;
+		// And run the scheduler (it will run on StopTest)
+		GoingAsync5.startScheduler(DateTime.now(), 'testjob');
+
+		Test.StopTest();
+ 
+ 		Map<ID, WorkOrder> wosmap = new Map<ID, WorkOrder>(wos);
+ 		
+ 		List<WorkOrder> results = 
+ 			[Select ID, Description, DescriptionSpanish__c 
+ 			from WorkOrder where ID in :wosmap.keyset()];
+ 		for(WorkOrder wo: results) 
+ 			System.AssertEquals(wo.Description + ' in Spanish', 
+ 				wo.DescriptionSpanish__c);
+ 
+    }	
+
 }
