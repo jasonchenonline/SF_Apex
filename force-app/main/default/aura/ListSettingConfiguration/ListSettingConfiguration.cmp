@@ -1,0 +1,16 @@
+<aura:component implements="flexipage:availableForAllPageTypes" controller="ConfigController" access="global" >
+    <aura:attribute name="configObject" type="AppConfig__c"/>
+    <aura:attribute name="originalObject" type="AppConfig__c" />
+    <aura:attribute name="configObjectName" type="String" />
+	<aura:handler name="init" value="{!this}" action="{!c.doInit}"/>    
+	<lightning:card title="Custom Settings" footer="temp">
+        <div class="slds-card__body_inner">
+            <c:StatusComponent aura:id="status" />
+            <h1>Editing setting {!v.configObjectName}
+            </h1>
+            <lightning:input class="slds-m-top_small" type="checkbox" label="App Enabled" name="enabledsetting" checked="{!v.configObject.AppEnabled__c}"/>
+            <lightning:input class="slds-m-top_small" type="checkbox" label="Enable Diagnostics" name="diagsetting" value="{!v.configObject.EnableDiagnostics__c}"/>
+            <lightning:button class="slds-m-top_small" label="Save" title="Save settings" onclick="{! c.saveSettings }"/>    
+        </div>
+	</lightning:card>
+</aura:component>

@@ -1,0 +1,17 @@
+<aura:component >
+	<aura:attribute name="message" type="String"/>
+    <aura:attribute name="success" type="Boolean" />
+    <aura:handler name="change" value="{!v.success}" action="{!c.successSet}"/>
+    <aura:if isTrue="{!v.message != null}">
+        <aura:if isTrue="{!v.success}">
+            <ui:message title="Success" severity="confirm" closable="false">
+                {!v.message}
+            </ui:message>
+            <aura:set attribute="else">
+                <ui:message title="Error" severity="error" closable="false">
+                    {!v.message}
+                </ui:message>
+            </aura:set>
+        </aura:if>
+    </aura:if>
+</aura:component>
