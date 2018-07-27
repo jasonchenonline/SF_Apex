@@ -45,6 +45,32 @@ public without sharing class ConfigCustomMetadata {
             Name = MDName;
             BooleanSetting = false;
         }
+        
+        public MDSettingClass() {}
+
+        public void setMetadataFields(List<Metadata.CustomMetadataValue> values)
+        {
+            setFieldValue(values, 'BooleanSetting__c', BooleanSetting);
+            setFieldValue(values, 'TextSetting__c', TextSetting);
+            Metadata.CustomMetadataValue customField = new Metadata.CustomMetadataValue();
+        }
+
+        private void setFieldValue(List<Metadata.CustomMetadataValue> values, String fieldName, Object fieldValue)
+        {
+            // Check for existing field
+            for(Metadata.CustomMetadataValue cmvalue: values)
+            {
+                if(cmvalue.field == fieldName)
+                {
+                    cmvalue.value = fieldValue;
+                    return;
+                }
+            }
+            Metadata.CustomMetadataValue customField = new Metadata.CustomMetadataValue();
+            customField.field = fieldName;
+            customField.value = fieldValue;
+            values.add(customField);
+        }
     }
 
     @testvisible

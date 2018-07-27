@@ -57,5 +57,57 @@ public without sharing class ConfigController {
         upsert configObject;
     }
 
+    @auraEnabled
+    public static String getCustomMetadataObject(String MDName)
+    {
+        List<MDSetting__mdt> settings = [Select DeveloperName, MasterLabel, BooleanSetting__c, TextSetting__c from MDSetting__mdt where DeveloperName = :MDName];
+        return(JSON.serialize((settings.size()==0)? new ConfigCustomMetadata.MDSettingClass(MDName): new ConfigCustomMetadata.MDSettingClass(settings[0])));
+    }
+
+    @auraEnabled
+    public static String saveCustomMetadataObject(String configObjectJSON, String originalObjectJSON, String MDName)
+    {
+        if(configObjectJSON == null || originalObjectJSON == null)
+            throw new AuraHandledException('No data provided to save');
+
+        ConfigCustomMetadata.MDSettingClass configObject = (ConfigCustomMetadata.MDSettingClass)JSON.deserialize(configObjectJSON, ConfigCustomMetadata.MDSettingClass.class);
+        ConfigCustomMetadata.MDSettingClass originalObject = (ConfigCustomMetadata.MDSettingClass)JSON.deserialize(originalObjectJSON, ConfigCustomMetadata.MDSettingClass.class);
+
+        // See if it exists?
+        List<MDSetting__mdt> currentObject = [Select DeveloperName, MasterLabel, BooleanSetting__c, TextSetting__c from MDSetting__mdt where DeveloperName = :MDName];
+        Metadata.CustomMetadata customMetadataRecord;
+
+        if(currentObject.size()>0)
+        {
+            system.debug(originalObject);
+            system.debug(currentObject);
+            // If one already exists, see if any of the values have changed
+            if(originalObject.BooleanSetting != currentObject[0].BooleanSetting__c ||
+                originalObject.TextSetting != currentObject[0].TextSetting__c) 
+            {
+                throw new AuraHandledException('The setting you are trying to save has been modified - restoring original values');
+            }
+            // Get the existing object as metadata
+            List<String> componentNameList = new List<String>{'MDSetting__mdt.' + MDName};
+            List<Metadata.Metadata> components = Metadata.Operations.retrieve(Metadata.MetadataType.CustomMetadata, componentNameList);
+            customMetadataRecord = (Metadata.CustomMetadata)components.get(0);
+        }
+        else {
+           // It's a new object
+           customMetadataRecord = new Metadata.CustomMetadata();
+           customMetadataRecord.fullName = 'MDSetting__mdt.' + MDName;
+           customMetadataRecord.label = MDName;
+        }
+        configObject.setMetadataFields(customMetadataRecord.values);
+        Metadata.DeployContainer mdContainer = new Metadata.DeployContainer();
+        mdContainer.addMetadata(customMetadataRecord);
+        ID jobID = Metadata.Operations.enqueueDeployment(mdContainer, new MDCallback());
+        return String.valueOf(jobID);
+    }
+
+    @auraenabled
+    public static String getSessionId() {
+        return UserInfo.getSessionId();
+    }
 
 }

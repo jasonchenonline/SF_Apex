@@ -1,0 +1,20 @@
+<aura:component implements="flexipage:availableForAllPageTypes" controller="ConfigController" access="global" >
+	<aura:attribute name="configObject" type="ConfigCustomMetadata.MDSettingClass"/>
+    <aura:attribute name="originalObject" type="ConfigCustomMetadata.MDSettingClass" />
+    <aura:attribute name="configObjectName" type="String" />
+    <aura:attribute name="metadataJobId" type="String" />
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>    
+    <aura:handler event="c:MetadataDeployEvent" action="{!c.metadataCompleteEvent}"/>
+	<lightning:card title="Custom Metadata" footer="temp">
+        <ui:spinner aura:id="spinner" isVisible="false" />
+        <div class="slds-card__body_inner">
+            <c:StatusComponent aura:id="status" />
+        
+            <h1>Editing setting {!v.configObjectName}
+            </h1>
+            <lightning:input class="slds-m-top_small" type="checkbox" label="Boolean Setting" name="bsetting" checked="{!v.configObject.BooleanSetting}"/>
+            <lightning:input class="slds-m-top_small" name="tsetting" label="Text Setting" value="{!v.configObject.TextSetting}"/>
+            <lightning:button class="slds-m-top_small" label="Save" title="Save settings" onclick="{! c.saveSettings }"/>    
+        </div>
+    </lightning:card>	
+</aura:component>

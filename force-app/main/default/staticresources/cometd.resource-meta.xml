@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<StaticResource xmlns="http://soap.sforce.com/2006/04/metadata">
+    <cacheControl>Public</cacheControl>
+    <contentType>application/x-javascript</contentType>
+    <description>CometD JS v3.1.1
+https://raw.githubusercontent.com/cometd/cometd/3.1.1/cometd-javascript/common/src/main/webapp/js/cometd/cometd.js</description>
+</StaticResource>

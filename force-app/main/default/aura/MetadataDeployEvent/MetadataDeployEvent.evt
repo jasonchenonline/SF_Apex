@@ -1,0 +1,6 @@
+<aura:event type="APPLICATION" description="Metadata deployment complete">
+    <aura:attribute name="jobId" type="String" />
+    <aura:attribute name="success" type="Boolean" />
+    <aura:attribute name="status" type="String" />
+    <aura:attribute name="errorMessage" type="String" />
+</aura:event>

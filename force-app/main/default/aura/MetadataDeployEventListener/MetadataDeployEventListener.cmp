@@ -1,0 +1,9 @@
+<aura:component controller="ConfigController" >
+  <ltng:require scripts="{!$Resource.cometd}" afterScriptsLoaded="{!c.onCometdLoaded}"/>
+  <aura:attribute name="sessionId" type="String"/>
+  <aura:attribute name="cometd" type="Object"/>
+  <aura:attribute name="cometdSubscriptions" type="Object[]"/>
+
+  <aura:handler name="init" value="{!this}" action="{!c.onInit}"/>
+  <aura:registerEvent name="metadataComplete" type="c:MetadataDeployEvent"/>
+</aura:component>
