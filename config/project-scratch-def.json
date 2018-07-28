@@ -2,7 +2,7 @@
     "orgName": "Advanced Apex 4",
     "edition": "Developer",
     "description": "Sample code for Advanced Apex Programming 4th Edition",
-    "features": ["API","AuthorApex"],
+    "features": ["API","AuthorApex","DebugApex"],
     "orgPreferences" : {
         "enabled": ["S1DesktopEnabled"]
     }
