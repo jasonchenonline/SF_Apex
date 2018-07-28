@@ -56,7 +56,7 @@ public with sharing class DiagnosticsMain {
 
         SObject firstObject = (triggerType == TriggerOperation.AFTER_DELETE || triggerType== TriggerOperation.BEFORE_DELETE)? 
             oldList[0]: newList[0];
-        
+
         if(activeFunction!=null)
         {
             // Active function always gets all triggers
@@ -69,6 +69,8 @@ public with sharing class DiagnosticsMain {
             // During internal DML update, forward only to those classes that need to see the trigger
             return;
         }
+
+		DiagnosticsInstrumentation.push('handleTriggers TriggerObject: ' + firstObject.getSObjectType() + ' Operation ' + triggerType);
 
         switch on firstObject
         {
@@ -85,6 +87,8 @@ public with sharing class DiagnosticsMain {
         }
 
         TriggerDMLSupport.updatePendingObjects();
+
+        DiagnosticsInstrumentation.pop();
 
     }
 

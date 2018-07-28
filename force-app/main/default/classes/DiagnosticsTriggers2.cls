@@ -35,11 +35,14 @@ public with sharing class DiagnosticsTriggers2  implements DiagnosticsMain.ITrig
         // Only process after update and after insert triggers
         if(triggertype != TriggerOperation.AFTER_UPDATE && triggerType != TriggerOperation.AFTER_INSERT) return;    
 
+		DiagnosticsInstrumentation.push('DiagnosticsTriggers2.MainEntry');
         List<Opportunity> newList = (List<Opportunity>)newObjList;
         List<Opportunity> oldList = (List<Opportunity>)oldObjList;
         Map<ID, Opportunity> newMap = DiagnosticsMain.castMapToOpportunities(newObjMap);
         Map<ID, Opportunity> oldMap = DiagnosticsMain.castMapToOpportunities(oldObjMap);
         processStageUpdate(triggerType, newList, newMap, oldMap);
+		DiagnosticsInstrumentation.pop();
+
     }
 
    	private static Map<ID, Double> probabilityOverrides = null;
@@ -48,6 +51,9 @@ public with sharing class DiagnosticsTriggers2  implements DiagnosticsMain.ITrig
     private void processStageUpdate(TriggerOperation triggerType,
              List<Opportunity> newlist, Map<ID, Opportunity> newMap, Map<ID,Opportunity> oldMap)
 	{
+		DiagnosticsInstrumentation.push(
+			'DiagnosticsTriggers2.processStageUpdate');
+
 		if(probabilityOverrides==null) probabilityOverrides = new Map<ID, Double>();
 
         List<Task> newTasks = new List<Task>();
@@ -73,6 +79,7 @@ public with sharing class DiagnosticsTriggers2  implements DiagnosticsMain.ITrig
             }
         }  
         if(newTasks.size()>0) insert newtasks;
+		DiagnosticsInstrumentation.pop();
 
 	}
 

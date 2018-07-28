@@ -33,6 +33,7 @@ public class TestDiagnostics1 {
         List<Opportunity> ops = new List<Opportunity>();
             initTestObjects(ops, 50, 10, 10, 20);   // for the awful example
         Test.StartTest();
+		DiagnosticsInstrumentation.debug('Performing bulkOpportunityTest');
         for(Opportunity op: ops) op.StageName = 'Qualification';
         update ops;
         Test.StopTest();
@@ -57,6 +58,7 @@ public class TestDiagnostics1 {
 		insert ops;
 
         Test.StartTest();
+		DiagnosticsInstrumentation.debug('Performing createTaskTest');
         for(Opportunity op: ops) op.StageName = 'Negotiation/Review';
         update ops;
         Test.StopTest();

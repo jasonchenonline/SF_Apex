@@ -34,17 +34,22 @@ public with sharing class DiagnosticsTriggers1 implements DiagnosticsMain.ITrigg
         if(objectType!= Opportunity.SObjectType) return;
         if(triggertype != TriggerOperation.AFTER_UPDATE) return;    // Only process after update triggers
 
+		DiagnosticsInstrumentation.push('DiagnosticsTriggers1.MainEntry');
         List<Opportunity> newList = (List<Opportunity>)newObjList;
         List<Opportunity> oldList = (List<Opportunity>)oldObjList;
         Map<ID, Opportunity> newMap = DiagnosticsMain.castMapToOpportunities(newObjMap);
         Map<ID, Opportunity> oldMap = DiagnosticsMain.castMapToOpportunities(oldObjMap);
         afterUpdateOpportunityBetterQueries2(newList, newMap, oldMap);
+		DiagnosticsInstrumentation.pop();
+
     }
 
     // This code implements the afterUpdateOpportuniytBetterQueries2 implementation from chapter 4
     private static void afterUpdateOpportunityBetterQueries2(
 	    	List<Opportunity> newList, Map<ID, Opportunity> newMap, Map<ID, Opportunity> oldMap)
 	{
+		DiagnosticsInstrumentation.Push(
+			'DiagnosticsTriggers1.AfterUpdateOpportunityBetterQueries2');
 
 		Set<ID> opportunityIDsWithStagenameChanges = new Set<ID>();
 		
@@ -56,7 +61,12 @@ public with sharing class DiagnosticsTriggers1 implements DiagnosticsMain.ITrigg
 		}
 		
 		// Quick exit if no processing required
-		if(opportunityIDsWithStagenameChanges.size()==0) return;	
+		if(opportunityIDsWithStagenameChanges.size()==0) {
+			// Place the whole function in the finally block of a try/catch that covers the entire function
+			// to avoid having to pop after each return
+			DiagnosticsInstrumentation.pop();
+			return;	
+		}
 			
 			
 		// Query for all related OpportunityContactRole
@@ -106,7 +116,7 @@ public with sharing class DiagnosticsTriggers1 implements DiagnosticsMain.ITrigg
 						ActivityDate = Date.Today().AddDays(3) ));
 			}
 			if(newTasks.size()>0) insert newTasks;
-			
+
 		}
 		if(opsWithNoPrimaryWithContactRoles.size()>0)
 		{			
@@ -183,7 +193,9 @@ public with sharing class DiagnosticsTriggers1 implements DiagnosticsMain.ITrigg
 				ocrsToUpdate.add(bestOcr);
 			}
 			update ocrsToUpdate;
+
 		}	
+		DiagnosticsInstrumentation.pop();
 
 	}
 
