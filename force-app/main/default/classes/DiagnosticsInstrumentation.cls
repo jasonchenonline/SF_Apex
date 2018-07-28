@@ -67,6 +67,12 @@ public with sharing class DiagnosticsInstrumentation {
 			ex.getLineNumber() + ' - ' + ex.getMessage() + 
 			' stack: ' + ex.getStackTraceString();
 		debug(exceptionInfo);
+		DebugInfo__c dbg = new DebugInfo__c(DebugData__c = currentLog());
+		exceptionTrace = ' Exception occurred line ' + 
+			ex.getLineNumber() + ' - ' + ex.getMessage();
+		for(String st: stackTrace) exceptionTrace += ' | ' + st;
+		exceptionTrace += ' |\n ';
+		if(diagnosticsEnabled) insert dbg;        
 	}
 
 	public static void pop()
