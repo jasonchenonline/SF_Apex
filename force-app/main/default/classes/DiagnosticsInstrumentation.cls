@@ -61,6 +61,14 @@ public with sharing class DiagnosticsInstrumentation {
 		diagnosticLog.add(new DiagnosticEntry(debugString));
 	}
 	
+	public static void debugException(Exception ex)
+	{
+		String exceptionInfo = 'Exception occurred line ' + 
+			ex.getLineNumber() + ' - ' + ex.getMessage() + 
+			' stack: ' + ex.getStackTraceString();
+		debug(exceptionInfo);
+	}
+
 	public static void pop()
 	{
         system.debug(loggingLevel.info, currentLevel);

@@ -54,8 +54,13 @@ public with sharing class DiagnosticsMain {
 			Map<ID,SObject> oldMap)
     {
 
+        try {
+
         SObject firstObject = (triggerType == TriggerOperation.AFTER_DELETE || triggerType== TriggerOperation.BEFORE_DELETE)? 
             oldList[0]: newList[0];
+
+		DiagnosticsInstrumentation.push('handleTriggers TriggerObject: ' + firstObject.getSObjectType() + ' Operation ' + triggerType +
+            ' in progress: ' + string.valueOf(activeFunction!=null) + ' in DML: ' + string.valueOf(TriggerDMLSupport.updatingPendingObjects));
 
         if(activeFunction!=null)
         {
@@ -69,8 +74,6 @@ public with sharing class DiagnosticsMain {
             // During internal DML update, forward only to those classes that need to see the trigger
             return;
         }
-
-		DiagnosticsInstrumentation.push('handleTriggers TriggerObject: ' + firstObject.getSObjectType() + ' Operation ' + triggerType);
 
         switch on firstObject
         {
@@ -88,7 +91,14 @@ public with sharing class DiagnosticsMain {
 
         TriggerDMLSupport.updatePendingObjects();
 
-        DiagnosticsInstrumentation.pop();
+
+        } catch (Exception ex ) {
+           DiagnosticsInstrumentation.debugException(ex);
+           DiagnosticsInstrumentation.popAll();
+        } finally
+        {
+            DiagnosticsInstrumentation.pop();
+        }
 
     }
 

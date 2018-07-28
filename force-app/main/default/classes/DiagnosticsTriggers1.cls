@@ -107,7 +107,9 @@ public with sharing class DiagnosticsTriggers1 implements DiagnosticsMain.ITrigg
 				if(t.OwnerID == op.OwnerID) opsWithoutTasks.remove(op.ID);	
 			}
 			// Now create new tasks
-			List<Task> newTasks = new List<Task>();
+			List<Task> newTasks;
+			// Comment out the following line to create a runtime error on creating opportunities
+			// newTasks = new List<Task>();
 			for(ID opid: opsWithoutTasks)
 			{
 				Opportunity op = newMap.get(opid);
