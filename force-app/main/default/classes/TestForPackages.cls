@@ -46,6 +46,30 @@ public class TestForPackages {
     	system.debug(fieldString + ' ' + rtypes);
     }
 
+	    @istest
+    public static void isNamespace()
+    {
+        system.debug(getNamespacePrefix());
+    }
+    
+	// You'll normally have this static variable and the getNamespacePrefix function in a regular class,
+	// not a test class. We just have it here for convenience in this example
+	private static string storedPrefix = null;
+
+    public static String getNamespacePrefix()
+    {
+		if(storedPrefix!=null) return storedPrefix;
+        Schema.DescribeFieldResult testField = Schema.sObjectType.Contact.fields.Level2__c;
+        Integer theposition = testField.getName().length() - testField.getLocalName().length();
+        if(theposition==0)
+        {
+            storedPrefix = ''; return storedPrefix;
+        }
+        // Subtract another 2 for the __ after the prefix
+        storedprefix = testField.getName().substring(0, theposition-2);
+        return storedPrefix;
+    }
+
 	@istest
     public static void testCorporateCurrency()
 	{
